@@ -1,58 +1,168 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# lottery-checker-api
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+宝くじ（ジャンボ系）の当選番号を自動取得し、JSON形式のREST APIとして提供するサービス。
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 概要
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| 項目 | 内容 |
+|------|------|
+| フレームワーク | Laravel 12 (PHP 8.4) |
+| データソース | みずほ銀行 宝くじページ（CSV） |
+| 更新頻度 | 毎月1日・16日（UTC 02:00 / JST 11:00） |
+| デプロイ先 | Render |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## システム構成
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```
+GitHub Actions
+  │
+  ├─ scripts/download-lottery-csv.mjs   Playwright でCSVをスクレイピング
+  │                                      → storage/app/jumbo.csv
+  │
+  ├─ php artisan lottery:fetch           CSVをパースしてJSONに変換
+  │                                      → storage/app/lottery.json
+  │
+  ├─ git auto-commit                     変更があればlottery.jsonをコミット
+  │
+  └─ Render deploy hook                  変更があればRenderに再デプロイ通知
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+Render (PHP 8.4 / Laravel)
+  └─ GET /api/lotteries                  lottery.jsonをそのまま返す
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## APIエンドポイント
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### GET /api/lotteries
 
-## Code of Conduct
+全回分の宝くじ当選番号一覧を返す。
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**レスポンス例**
 
-## Security Vulnerabilities
+```json
+[
+  {
+    "round": "1107",
+    "name": "ドリームジャンボミニ",
+    "draw_date": "令和8年6月10日",
+    "prizes": [
+      {
+        "rank": "1等",
+        "amount": "5000万円",
+        "rule": "58組",
+        "number": "112994"
+      },
+      {
+        "rank": "1等の前後賞",
+        "amount": "2500万円",
+        "rule": "1等の前後の番号",
+        "number": ""
+      }
+    ]
+  }
+]
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**レスポンスフィールド**
 
-## License
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `round` | string | 回号（数字のみ） |
+| `name` | string | 宝くじ名称 |
+| `draw_date` | string | 抽選日（和暦） |
+| `prizes[].rank` | string | 等級（例: `1等`、`1等の前後賞`） |
+| `prizes[].amount` | string | 賞金額（例: `3億円`） |
+| `prizes[].rule` | string | 当選ルール（組・下N桁等） |
+| `prizes[].number` | string | 当選番号（前後賞など該当なしの場合は空文字） |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## データ更新フロー
+
+### 1. CSVダウンロード（`scripts/download-lottery-csv.mjs`）
+
+- Playwright（Stealth Plugin）でみずほ銀行のジャンボページを開く
+- ページのブラウザコンテキストから`jumbo.csv`をfetch（Bot対策回避）
+- `storage/app/jumbo.csv` に保存
+
+### 2. JSON生成（`php artisan lottery:fetch`）
+
+- `jumbo.csv`（Shift_JIS）を読み込み、UTF-8に変換
+- 「第N回」行を回情報、「N等」行を等級情報として解析
+- 全角英数字・全角スペースを正規化
+- `storage/app/lottery.json` に出力
+
+### 3. 自動コミット・デプロイ
+
+- `stefanzweifel/git-auto-commit-action` で差分があればコミット
+- 変更検出時のみRender Deploy Hookを叩いて再デプロイ
+
+---
+
+## ローカル開発
+
+### 前提条件
+
+- PHP 8.4+
+- Composer
+- Node.js 20+
+
+### セットアップ
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
+
+### CSVダウンロード
+
+```bash
+npm install playwright playwright-extra puppeteer-extra-plugin-stealth
+npx playwright install chromium --with-deps
+node scripts/download-lottery-csv.mjs
+```
+
+### JSON生成
+
+```bash
+php artisan lottery:fetch
+```
+
+### 開発サーバー起動
+
+```bash
+php artisan serve
+# → http://localhost:8000/api/lotteries
+```
+
+---
+
+## Dockerでの起動
+
+```bash
+docker build -t lottery-checker-api .
+docker run -p 10000:10000 lottery-checker-api
+# → http://localhost:10000/api/lotteries
+```
+
+---
+
+## CI/CD（GitHub Actions）
+
+ワークフロー: `.github/workflows/fetch-lottery.yml`
+
+**トリガー**
+- スケジュール: 毎月1日・16日 UTC 02:00
+- 手動: `workflow_dispatch`
+
+**必要なシークレット**
+
+| シークレット名 | 用途 |
+|---------------|------|
+| `RENDER_DEPLOY_HOOK_URL` | Renderへのデプロイ通知URL |
