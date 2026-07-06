@@ -1,7 +1,10 @@
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+chromium.use(StealthPlugin());
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = join(__dirname, '..', 'storage', 'app', 'jumbo.csv');
@@ -12,7 +15,6 @@ const JUMBO_PAGE_URL = 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/ju
     const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         locale: 'ja-JP',
-        acceptDownloads: true,
     });
 
     const page = await context.newPage();
@@ -23,7 +25,6 @@ const JUMBO_PAGE_URL = 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/ju
         timeout: 60000,
     });
 
-    // ページのブラウザコンテキスト（Akamai通過済みのCookie）でCSVをfetch
     const csvUrl = `${JUMBO_PAGE_URL}csv/jumbo.csv?${Date.now()}`;
     console.log(`CSVをブラウザコンテキストからダウンロード: ${csvUrl}`);
 
@@ -40,7 +41,6 @@ const JUMBO_PAGE_URL = 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/ju
     }, csvUrl);
 
     const csvBuffer = Buffer.from(csvBytes);
-
     writeFileSync(CSV_PATH, csvBuffer);
     console.log(`CSV保存完了: ${CSV_PATH} (${csvBuffer.length} bytes)`);
 
