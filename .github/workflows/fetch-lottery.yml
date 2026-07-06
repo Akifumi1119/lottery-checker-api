@@ -49,7 +49,12 @@ jobs:
         run: php artisan lottery:fetch
 
       - name: Commit lottery.json
+        id: auto-commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update lottery.json'
           file_pattern: 'storage/app/lottery.json'
+
+      - name: Trigger Render Deploy
+        if: steps.auto-commit.outputs.changes_detected == 'true'
+        run: curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
