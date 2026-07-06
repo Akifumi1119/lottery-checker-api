@@ -29,6 +29,12 @@ class FetchLotteryData extends Command
     public function handle() {
         $csvPath = storage_path('app/jumbo.csv');
 
+        if (!file_exists($csvPath)) {
+            $this->error("CSVが見つかりません: {$csvPath}");
+            $this->line('scripts/download-lottery-csv.mjs を実行してからもう一度試してください。');
+            return 1;
+        }
+
         $csv = file($csvPath);
 
         $result = [];

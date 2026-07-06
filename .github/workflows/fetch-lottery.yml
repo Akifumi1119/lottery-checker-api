@@ -1,0 +1,53 @@
+name: Fetch Lottery Data
+
+on:
+  schedule:
+    # 毎月1日・16日の2時（UTC）= 日本時間11時に実行
+    # ジャンボ系は年5回程度の抽選なので月2回で最新を捕捉できる
+    - cron: '0 2 1,16 * *'
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm install playwright
+          npx playwright install chromium --with-deps
+
+      - name: Download CSV
+        run: node scripts/download-lottery-csv.mjs
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Generate App Key
+        run: php artisan key:generate
+
+      - name: Generate lottery.json
+        run: php artisan lottery:fetch
+
+      - name: Commit lottery.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update lottery.json'
+          file_pattern: 'storage/app/lottery.json'
