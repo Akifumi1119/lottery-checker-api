@@ -23,31 +23,23 @@ const JUMBO_PAGE_URL = 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/ju
         timeout: 60000,
     });
 
-    // CSVリンクを取得
-    const csvHref = await page.evaluate(() => {
-        const link = document.querySelector('a[href*="jumbo.csv"]');
-        return link ? link.href : null;
-    });
+    // ページのブラウザコンテキスト（Akamai通過済みのCookie）でCSVをfetch
+    const csvUrl = `${JUMBO_PAGE_URL}csv/jumbo.csv?${Date.now()}`;
+    console.log(`CSVをブラウザコンテキストからダウンロード: ${csvUrl}`);
 
-    let csvBuffer;
+    const csvBytes = await page.evaluate(async (url) => {
+        const response = await fetch(url, {
+            credentials: 'include',
+            headers: {
+                'Referer': 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/jumbo/',
+            },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const buffer = await response.arrayBuffer();
+        return Array.from(new Uint8Array(buffer));
+    }, csvUrl);
 
-    if (csvHref) {
-        console.log(`CSVリンク検出: ${csvHref}`);
-        const response = await page.goto(csvHref, { timeout: 30000 });
-        if (!response.ok()) {
-            throw new Error(`CSV取得失敗: HTTP ${response.status()}`);
-        }
-        csvBuffer = await response.body();
-    } else {
-        // フォールバック: タイムスタンプ付きURLで直接リクエスト
-        const fallbackUrl = `${JUMBO_PAGE_URL}csv/jumbo.csv?${Date.now()}`;
-        console.log(`CSVリンクが見つからないためフォールバック: ${fallbackUrl}`);
-        const response = await page.goto(fallbackUrl, { timeout: 30000 });
-        if (!response.ok()) {
-            throw new Error(`CSV取得失敗: HTTP ${response.status()}`);
-        }
-        csvBuffer = await response.body();
-    }
+    const csvBuffer = Buffer.from(csvBytes);
 
     writeFileSync(CSV_PATH, csvBuffer);
     console.log(`CSV保存完了: ${CSV_PATH} (${csvBuffer.length} bytes)`);
