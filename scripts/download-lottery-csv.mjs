@@ -7,8 +7,21 @@ import { fileURLToPath } from 'url';
 chromium.use(StealthPlugin());
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CSV_PATH = join(__dirname, '..', 'storage', 'app', 'jumbo.csv');
-const JUMBO_PAGE_URL = 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/jumbo/';
+
+const TARGETS = [
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/jumbo/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/jumbo/csv/jumbo.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'jumbo.csv'),
+        label: 'ジャンボ宝くじ',
+    },
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/zenkoku/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/zenkoku/csv/zenkoku.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'zenkoku.csv'),
+        label: '全国通常宝くじ',
+    },
+];
 
 (async () => {
     const browser = await chromium.launch({ headless: true });
@@ -19,30 +32,30 @@ const JUMBO_PAGE_URL = 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/ju
 
     const page = await context.newPage();
 
-    console.log('みずほ銀行のジャンボページにアクセス中...');
-    await page.goto(JUMBO_PAGE_URL, {
-        waitUntil: 'networkidle',
-        timeout: 60000,
-    });
-
-    const csvUrl = `${JUMBO_PAGE_URL}csv/jumbo.csv?${Date.now()}`;
-    console.log(`CSVをブラウザコンテキストからダウンロード: ${csvUrl}`);
-
-    const csvBytes = await page.evaluate(async (url) => {
-        const response = await fetch(url, {
-            credentials: 'include',
-            headers: {
-                'Referer': 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/jumbo/',
-            },
+    for (const target of TARGETS) {
+        console.log(`みずほ銀行の${target.label}ページにアクセス中...`);
+        await page.goto(target.pageUrl, {
+            waitUntil: 'networkidle',
+            timeout: 60000,
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const buffer = await response.arrayBuffer();
-        return Array.from(new Uint8Array(buffer));
-    }, csvUrl);
 
-    const csvBuffer = Buffer.from(csvBytes);
-    writeFileSync(CSV_PATH, csvBuffer);
-    console.log(`CSV保存完了: ${CSV_PATH} (${csvBuffer.length} bytes)`);
+        const csvUrl = target.csvUrl(Date.now());
+        console.log(`CSVをブラウザコンテキストからダウンロード: ${csvUrl}`);
+
+        const csvBytes = await page.evaluate(async ([url, referer]) => {
+            const response = await fetch(url, {
+                credentials: 'include',
+                headers: { 'Referer': referer },
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const buffer = await response.arrayBuffer();
+            return Array.from(new Uint8Array(buffer));
+        }, [csvUrl, target.pageUrl]);
+
+        const csvBuffer = Buffer.from(csvBytes);
+        writeFileSync(target.savePath, csvBuffer);
+        console.log(`CSV保存完了: ${target.savePath} (${csvBuffer.length} bytes)`);
+    }
 
     await browser.close();
 })().catch(err => {

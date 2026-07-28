@@ -6,6 +6,11 @@
         "build": "vite build",
         "dev": "vite"
     },
+    "dependencies": {
+        "playwright": "^1.62.0",
+        "playwright-extra": "^4.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2"
+    },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
         "concurrently": "^9.0.1",

@@ -27,27 +27,40 @@ class FetchLotteryData extends Command
     }
 
     public function handle() {
-        $csvPath = storage_path('app/jumbo.csv');
+        $sources = [
+            ['csv' => storage_path('app/jumbo.csv'),    'json' => storage_path('app/lottery.json')],
+            ['csv' => storage_path('app/zenkoku.csv'),  'json' => storage_path('app/zenkoku.json')],
+        ];
 
-        if (!file_exists($csvPath)) {
-            $this->error("CSVが見つかりません: {$csvPath}");
+        $missing = false;
+        foreach ($sources as $source) {
+            if (!file_exists($source['csv'])) {
+                $this->error("CSVが見つかりません: {$source['csv']}");
+                $missing = true;
+            }
+        }
+        if ($missing) {
             $this->line('scripts/download-lottery-csv.mjs を実行してからもう一度試してください。');
             return 1;
         }
 
+        foreach ($sources as $source) {
+            $result = $this->parseCsv($source['csv']);
+            file_put_contents(
+                $source['json'],
+                json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            );
+            $this->info("JSON生成完了: {$source['json']}");
+        }
+    }
+
+    private function parseCsv(string $csvPath): array {
         $csv = file($csvPath);
-
         $result = [];
-
         $currentLottery = null;
 
         foreach ($csv as $line) {
-
-            $line = mb_convert_encoding(
-                trim($line),
-                'UTF-8',
-                'SJIS-win'
-            );
+            $line = mb_convert_encoding(trim($line), 'UTF-8', 'SJIS-win');
 
             if (!$line) {
                 continue;
@@ -56,12 +69,7 @@ class FetchLotteryData extends Command
             $columns = str_getcsv($line);
 
             // 回情報
-            if (
-                isset($columns[0]) &&
-                str_contains($columns[0], '第')
-            ) {
-
-                // 前回追加
+            if (isset($columns[0]) && str_contains($columns[0], '第')) {
                 if ($currentLottery) {
                     $result[] = $currentLottery;
                 }
@@ -69,43 +77,30 @@ class FetchLotteryData extends Command
                 preg_match('/第(\d+)回/', $columns[0], $matches);
 
                 $currentLottery = [
-                    'round' => $this->normalizeText($matches[1] ?? ''),
-                    'name' => $this->normalizeText($columns[1] ?? ''),
+                    'round'     => $this->normalizeText($matches[1] ?? ''),
+                    'name'      => $this->normalizeText($columns[1] ?? ''),
                     'draw_date' => $this->normalizeText($columns[2] ?? ''),
-                    'prizes' => []
+                    'prizes'    => [],
                 ];
 
                 continue;
             }
 
             // 等級情報
-            if (
-                isset($columns[0]) &&
-                str_contains($columns[0], '等')
-            ) {
-
+            if (isset($columns[0]) && str_contains($columns[0], '等')) {
                 $currentLottery['prizes'][] = [
-                    'rank' => $this->normalizeText($columns[0] ?? ''),
+                    'rank'   => $this->normalizeText($columns[0] ?? ''),
                     'amount' => $this->normalizeText($columns[1] ?? ''),
-                    'rule' => $this->normalizeText($columns[2] ?? ''),
+                    'rule'   => $this->normalizeText($columns[2] ?? ''),
                     'number' => $this->normalizeText($columns[3] ?? ''),
                 ];
             }
         }
 
-        // 最後追加
         if ($currentLottery) {
             $result[] = $currentLottery;
         }
 
-        file_put_contents(
-            storage_path('app/lottery.json'),
-            json_encode(
-                $result,
-                JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
-            )
-        );
-
-        $this->info('JSON生成完了');
+        return $result;
     }
 }
