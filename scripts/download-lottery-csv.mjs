@@ -21,6 +21,36 @@ const TARGETS = [
         savePath: join(__dirname, '..', 'storage', 'app', 'zenkoku.csv'),
         label: '全国通常宝くじ',
     },
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/tokyo/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/tokyo/csv/tokyo.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'tokyo.csv'),
+        label: '東京都宝くじ',
+    },
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/kct/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/kct/csv/kct.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'kct.csv'),
+        label: '関東・中部・東北自治宝くじ',
+    },
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/kinki/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/kinki/csv/kinki.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'kinki.csv'),
+        label: '近畿宝くじ',
+    },
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/nishinihon/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/nishinihon/csv/nishinihon.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'nishinihon.csv'),
+        label: '西日本宝くじ',
+    },
+    {
+        pageUrl: 'https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/chiiki/',
+        csvUrl: (ts) => `https://www.mizuhobank.co.jp/retail/takarakuji/tsujyo/chiiki/csv/chiiki.csv?${ts}`,
+        savePath: join(__dirname, '..', 'storage', 'app', 'chiiki.csv'),
+        label: '地域医療等振興自治宝くじ',
+    },
 ];
 
 (async () => {

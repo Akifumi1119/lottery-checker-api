@@ -28,8 +28,13 @@ class FetchLotteryData extends Command
 
     public function handle() {
         $sources = [
-            ['csv' => storage_path('app/jumbo.csv'),    'json' => storage_path('app/lottery.json')],
-            ['csv' => storage_path('app/zenkoku.csv'),  'json' => storage_path('app/zenkoku.json')],
+            ['csv' => storage_path('app/jumbo.csv'),   'json' => storage_path('app/lottery.json')],
+            ['csv' => storage_path('app/zenkoku.csv'), 'json' => storage_path('app/zenkoku.json')],
+            ['csv' => storage_path('app/tokyo.csv'),   'json' => storage_path('app/tokyo.json')],
+            ['csv' => storage_path('app/kct.csv'),     'json' => storage_path('app/kct.json')],
+            ['csv' => storage_path('app/kinki.csv'),       'json' => storage_path('app/kinki.json')],
+            ['csv' => storage_path('app/nishinihon.csv'), 'json' => storage_path('app/nishinihon.json')],
+            ['csv' => storage_path('app/chiiki.csv'),     'json' => storage_path('app/chiiki.json')],
         ];
 
         $missing = false;
@@ -86,8 +91,8 @@ class FetchLotteryData extends Command
                 continue;
             }
 
-            // 等級情報
-            if (isset($columns[0]) && str_contains($columns[0], '等')) {
+            // 等級情報（「特別賞」「○○賞」など「等」を含まない賞も対象）
+            if (isset($columns[0]) && (str_contains($columns[0], '等') || str_contains($columns[0], '賞'))) {
                 $currentLottery['prizes'][] = [
                     'rank'   => $this->normalizeText($columns[0] ?? ''),
                     'amount' => $this->normalizeText($columns[1] ?? ''),

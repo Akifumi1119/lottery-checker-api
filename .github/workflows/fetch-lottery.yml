@@ -48,12 +48,12 @@ jobs:
       - name: Generate lottery.json
         run: php artisan lottery:fetch
 
-      - name: Commit lottery.json
+      - name: Commit lottery.json and zenkoku.json
         id: auto-commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update lottery.json'
-          file_pattern: 'storage/app/lottery.json'
+          file_pattern: 'storage/app/lottery.json storage/app/zenkoku.json storage/app/tokyo.json storage/app/kct.json storage/app/kinki.json storage/app/nishinihon.json storage/app/chiiki.json'
 
       - name: Trigger Render Deploy
         if: steps.auto-commit.outputs.changes_detected == 'true'

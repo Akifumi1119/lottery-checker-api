@@ -2,3 +2,10 @@
 !private/
 !public/
 !.gitignore
+!lottery.json
+!zenkoku.json
+!tokyo.json
+!kct.json
+!kinki.json
+!nishinihon.json
+!chiiki.json
