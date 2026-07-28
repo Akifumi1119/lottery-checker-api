@@ -81,11 +81,9 @@ class FetchLotteryData extends Command
 
                 preg_match('/第(\d+)回/', $columns[0], $matches);
 
-                $name = $this->normalizeText($columns[1] ?? '');
-                if ($name === '') {
-                    // 名前がない場合は「第XX回 ○○宝くじ」から系列名を取り出す
-                    $name = $this->normalizeText(preg_replace('/第\d+回\s*/', '', $columns[0]));
-                }
+                $series = $this->normalizeText(preg_replace('/第\d+回\s*/', '', $columns[0]));
+                $specific = $this->normalizeText($columns[1] ?? '');
+                $name = $specific !== '' ? "{$series}（{$specific}）" : $series;
 
                 $currentLottery = [
                     'round'     => $this->normalizeText($matches[1] ?? ''),
