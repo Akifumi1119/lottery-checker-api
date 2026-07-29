@@ -10,7 +10,7 @@
 |------|------|
 | フレームワーク | Laravel 13 (PHP 8.4) |
 | データソース | みずほ銀行 宝くじページ（CSV） |
-| 更新頻度 | 毎月1日・16日（UTC 02:00 / JST 11:00） |
+| 更新頻度 | 毎日（UTC 09:00 / JST 18:00） |
 | デプロイ先 | Render |
 
 ---
@@ -204,7 +204,7 @@ docker run -p 10000:10000 lottery-checker-api
 ワークフロー: `.github/workflows/fetch-lottery.yml`
 
 **トリガー**
-- スケジュール: 毎月1日・16日 UTC 02:00
+- スケジュール: 毎日 UTC 09:00（JST 18:00）
 - 手動: `workflow_dispatch`
 
 **必要なシークレット**

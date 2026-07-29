@@ -2,9 +2,8 @@ name: Fetch Lottery Data
 
 on:
   schedule:
-    # 毎月1日・16日の2時（UTC）= 日本時間11時に実行
-    # ジャンボ系は年5回程度の抽選なので月2回で最新を捕捉できる
-    - cron: '0 2 1,16 * *'
+    # 毎日9時（UTC）= 日本時間18時に実行
+    - cron: '0 9 * * *'
   workflow_dispatch:
 
 jobs:
