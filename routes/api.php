@@ -42,6 +42,13 @@ Route::get('/lotteries/chiiki', function () use ($lotteryRoute) {
     return $lotteryRoute('access_lotteries_chiiki', 'chiiki.json');
 });
 
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toIso8601String(),
+    ]);
+});
+
 Route::get('/stats', function () {
     $keys = [
         'lotteries'           => 'access_lotteries',
